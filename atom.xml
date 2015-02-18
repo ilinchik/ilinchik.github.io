@@ -1,0 +1,518 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Anton Ilinchik's Blog]]></title>
+  <link href="http://ilinchik.github.io/atom.xml" rel="self"/>
+  <link href="http://ilinchik.github.io/"/>
+  <updated>2015-02-18T23:36:38+03:00</updated>
+  <id>http://ilinchik.github.io/</id>
+  <author>
+    <name><![CDATA[Anton Ilinchik]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Java Agent на службе JVM]]></title>
+    <link href="http://ilinchik.github.io/blog/2015/02/07/java-agent/"/>
+    <updated>2015-02-07T01:19:35+03:00</updated>
+    <id>http://ilinchik.github.io/blog/2015/02/07/java-agent</id>
+    <content type="html"><![CDATA[<p><img class="left" src="http://habrastorage.org/getpro/habr/post_images/0d6/cea/505/0d6cea5059f39fac1c6522285bd73794.png"">
+Наверное многие слышали или сталкивались с таким параметром JVM как -javaagent, увидеть этот параметр вы могли используя <a href="http://zeroturnaround.com/software/jrebel">Jrebel</a> или <a href="https://plumbr.eu">Plumbr</a> это могло выглядеть например так <code>JAVA_OPTS=-javaagent:[path/to/]jrebel.jar</code> или так <code>-javaagent:/path-to/plumbr.jar</code>
+Хотя <strong>javaagent</strong> появился еще в версии java 1.5, многие разработчики так никогда и не использовали возможности агентов и имеют смутное представление что это такое.<br/>
+Что же это за агент? Зачем он может нам понадобиться и как написать свой?</p>
+
+<!-- more -->
+
+
+<h2>Что такое javaagent</h2>
+
+<p>Как я написал выше javaagent это один из параметров JVM, который позволяет указать агент который будет запущен с вашим приложением, а точнее он будет запущен еще перед запуском вашего приложения. Сам агент это отдельное приложение которое предоставляет доступ к механизму манипуляции байт-кодом (<code>java.lang.instrument</code>) в runtime. Это если вкратце. Официальную документацию можно почитать <a href="http://docs.oracle.com/javase/8/docs/api/java/lang/instrument/package-summary.html">тут</a>, но она довольно скудная. Ничего непонятно? Итак, давайте разбираться. Лучше всего разбираться на примерах.</p>
+
+<h2>Напишем элементарный агент</h2>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kn">package</span> <span class="n">ru</span><span class="o">.</span><span class="na">ilinchik</span><span class="o">.</span><span class="na">agent</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Agent007</span> <span class="o">{</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">premain</span><span class="o">(</span><span class="n">String</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;Hello! I`m java agent&quot;</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Обратите внимание, агент обязательно должен реализовывать метод <strong>premain</strong> со следующей сигнатурой<br/>
+<code>public static void premain(String args); </code><br/>
+или<br/>
+<code>public static void premain(String args, Instrumentation inst);</code></p>
+
+<p>Класс агента должен быть упакован в jar и содержать <code>MANIFEST.MF</code>, с обязательным атрибутом
+<strong>PreMain-Class</strong> - указывает на класс агента с premain методом. Есть и другие атрибуты агента, но они необязательные и сейчас  нам не понадобятся.</p>
+
+<p>Вот так будет выглядеть наш manifest.mf.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">Manifest</span><span class="o">-</span><span class="nl">Version:</span> <span class="mf">1.0</span>
+</span><span class='line'><span class="n">PreMain</span><span class="o">-</span><span class="nl">Class:</span> <span class="n">ru</span><span class="o">.</span><span class="na">ilinchik</span><span class="o">.</span><span class="na">agent</span><span class="o">.</span><span class="na">Agent007</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p> <em>не забудьте добавить перевод строки в конец файла</em></p>
+
+<p>Теперь упакуем все это в jar</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">jar</span> <span class="o">-</span><span class="n">cvfm</span> <span class="n">Agent007</span><span class="o">.</span><span class="na">jar</span> <span class="n">manifest</span><span class="o">.</span><span class="na">mf</span>  <span class="n">ru</span><span class="o">/</span><span class="n">ilinchik</span><span class="o">/</span><span class="n">agent</span><span class="o">/</span><span class="n">Agent007</span><span class="o">.</span><span class="na">class</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>И наконец класс испытатель</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kn">package</span> <span class="n">ru</span><span class="o">.</span><span class="na">ilinchik</span><span class="o">.</span><span class="na">agent</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">AgentTester</span> <span class="o">{</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;Hello! I`m agent tester&quot;</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Запускаем AgentTester из командной строки</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">java</span> <span class="o">-</span><span class="nl">javaagent:</span><span class="n">Agent007</span><span class="o">.</span><span class="na">jar</span> <span class="n">ru</span><span class="o">.</span><span class="na">ilinchik</span><span class="o">.</span><span class="na">agent</span><span class="o">.</span><span class="na">AgentTester</span>
+</span><span class='line'><span class="n">Hello</span><span class="o">!</span> <span class="n">I</span><span class="err">`</span><span class="n">m</span> <span class="n">java</span> <span class="n">agent</span>
+</span><span class='line'><span class="n">Hello</span><span class="o">!</span> <span class="n">I</span><span class="err">`</span><span class="n">m</span> <span class="n">agent</span> <span class="n">tester</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Из этого примера видно что:</p>
+
+<ul>
+<li>метод <b>premain</b> исполняется еще до вызова метода <b>main</b> основного приложения.</li>
+<li>агент указывается с помощью параметра <code>-javaagent:jarpath[=options]</code></li>
+</ul>
+
+
+<h2>Давайте попробуем извлечь из агента какую-нибудь пользу</h2>
+
+<p>Вообще <strong><em>механизм агентов предназначен для манипуляции байт-кодом</em></strong>, но скажу сразу модифицировать байт-код в этой статье мы не будем иначе можно уйти далеко-далеко за пределы этого поста. Кому интересно можно посмотреть на <a href="http://www.csg.ci.i.u-tokyo.ac.jp/~chiba/javassist/">javassist</a> так как стандартных средств для работы с байт-кодом нет.</p>
+
+<p>Напишем AgentCounter который будет выводить имя загружаемого класс и подсчитывать кол-во загруженных классов. Так мы сможем понаблюдать за работой classloader`a.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kn">package</span> <span class="n">ru</span><span class="o">.</span><span class="na">ilinchik</span><span class="o">.</span><span class="na">agent</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="kn">import</span> <span class="nn">java.lang.instrument.Instrumentation</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">AgentCounter</span> <span class="o">{</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">premain</span><span class="o">(</span><span class="n">String</span> <span class="n">agentArgument</span><span class="o">,</span> <span class="n">Instrumentation</span> <span class="n">instrumentation</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;Agent Counter&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">instrumentation</span><span class="o">.</span><span class="na">addTransformer</span><span class="o">(</span><span class="k">new</span> <span class="nf">ClassTransformer</span><span class="o">());</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Обратите внимание, теперь я использую другую сигнатуру метода premain. В объект instrumentation я передаю ClassTransformer который и выполняет всю работу. ClassTransformer будет срабатывать каждый раз при загрузке класса. Если вы хотите использовать свой ClassTransformer, вы должны реализовать интерфейс <code>java.lang.instrument.ClassFileTransformer</code> и добавить свой объект через метод <code>Instrumentation.addTransformer</code></p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kn">package</span> <span class="n">ru</span><span class="o">.</span><span class="na">ilinchik</span><span class="o">.</span><span class="na">agent</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="kn">import</span> <span class="nn">java.lang.instrument.ClassFileTransformer</span><span class="o">;</span>
+</span><span class='line'><span class="kn">import</span> <span class="nn">java.security.ProtectionDomain</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ClassTransformer</span> <span class="kd">implements</span> <span class="n">ClassFileTransformer</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">private</span> <span class="kd">static</span> <span class="kt">int</span> <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nd">@Override</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kt">byte</span><span class="o">[]</span> <span class="nf">transform</span><span class="o">(</span><span class="n">ClassLoader</span> <span class="n">loader</span><span class="o">,</span>
+</span><span class='line'>                            <span class="n">String</span> <span class="n">className</span><span class="o">,</span>
+</span><span class='line'>                            <span class="n">Class</span><span class="o">&lt;?&gt;</span> <span class="n">classBeingRedefined</span><span class="o">,</span>
+</span><span class='line'>                            <span class="n">ProtectionDomain</span> <span class="n">protectionDomain</span><span class="o">,</span>
+</span><span class='line'>                            <span class="kt">byte</span><span class="o">[]</span> <span class="n">classfileBuffer</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;load class: &quot;</span> <span class="o">+</span> <span class="n">className</span><span class="o">.</span><span class="na">replaceAll</span><span class="o">(</span><span class="s">&quot;/&quot;</span><span class="o">,</span> <span class="s">&quot;.&quot;</span><span class="o">));</span>
+</span><span class='line'>        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">String</span><span class="o">.</span><span class="na">format</span><span class="o">(</span><span class="s">&quot;loaded %s classes&quot;</span><span class="o">,</span> <span class="o">++</span><span class="n">count</span><span class="o">));</span>
+</span><span class='line'>        <span class="k">return</span> <span class="n">classfileBuffer</span><span class="o">;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>classfileBuffer - это и есть байт-код текущего класса представленный в виде массива байт, для его переопределения трансформер должен вернуть новый массив байт, в данном примере мы не меняем содержимое класса поэтому просто возвращаем тот же массив.</p>
+
+<p>Пакуем агент и трансформер в новый jar</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">jar</span> <span class="o">-</span><span class="n">cvfm</span> <span class="n">agentCounter</span><span class="o">.</span><span class="na">jar</span> <span class="n">manifest</span><span class="o">.</span><span class="na">mf</span>  <span class="n">ru</span><span class="o">/</span><span class="n">ilinchik</span><span class="o">/</span><span class="n">agent</span><span class="o">/</span><span class="n">AgentCounter</span><span class="o">.</span><span class="na">class</span> <span class="n">ru</span><span class="o">/</span><span class="n">ilinchik</span><span class="o">/</span><span class="n">agent</span><span class="o">/</span><span class="n">ClassTransformer</span><span class="o">.</span><span class="na">class</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Немного модифицируем класс тестер</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kn">package</span> <span class="n">ru</span><span class="o">.</span><span class="na">ilinchik</span><span class="o">.</span><span class="na">agent</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">AgentTester</span> <span class="o">{</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">A</span> <span class="n">a</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">A</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">B</span> <span class="n">b</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">B</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">C</span> <span class="n">c</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="kd">class</span> <span class="nc">A</span> <span class="o">{};</span>
+</span><span class='line'><span class="kd">class</span> <span class="nc">B</span> <span class="o">{};</span>
+</span><span class='line'><span class="kd">class</span> <span class="nc">C</span> <span class="o">{};</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Запускаем AgentTester c новым агентом</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">java</span> <span class="o">-</span><span class="nl">javaagent:</span><span class="n">agentCounter</span><span class="o">.</span><span class="na">jar</span> <span class="n">ru</span><span class="o">.</span><span class="na">ilinchik</span><span class="o">.</span><span class="na">agent</span><span class="o">.</span><span class="na">AgentTester</span>
+</span><span class='line'><span class="n">Agent</span> <span class="n">Counter</span>
+</span><span class='line'><span class="n">load</span> <span class="nl">class:</span> <span class="n">sun</span><span class="o">.</span><span class="na">launcher</span><span class="o">.</span><span class="na">LauncherHelper</span>
+</span><span class='line'><span class="n">loaded</span> <span class="mi">1</span> <span class="n">classes</span>
+</span><span class='line'><span class="n">load</span> <span class="nl">class:</span> <span class="n">ru</span><span class="o">.</span><span class="na">ilinchik</span><span class="o">.</span><span class="na">agent</span><span class="o">.</span><span class="na">AgentTester</span>
+</span><span class='line'><span class="n">loaded</span> <span class="mi">2</span> <span class="n">classes</span>
+</span><span class='line'><span class="n">load</span> <span class="nl">class:</span> <span class="n">ru</span><span class="o">.</span><span class="na">ilinchik</span><span class="o">.</span><span class="na">agent</span><span class="o">.</span><span class="na">A</span>
+</span><span class='line'><span class="n">loaded</span> <span class="mi">3</span> <span class="n">classes</span>
+</span><span class='line'><span class="n">load</span> <span class="nl">class:</span> <span class="n">ru</span><span class="o">.</span><span class="na">ilinchik</span><span class="o">.</span><span class="na">agent</span><span class="o">.</span><span class="na">B</span>
+</span><span class='line'><span class="n">loaded</span> <span class="mi">4</span> <span class="n">classes</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><em>для разных версий java результаты могут отличаться</em></p>
+
+<p>Если запустить какое-нибудь enterprise приложение с таким агентом, можно получить довольно интересные результаты, например один из проектов после старта выдал мне следующее:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">sun</span><span class="o">.</span><span class="na">reflect</span><span class="o">.</span><span class="na">GeneratedMethodAccessor230</span>
+</span><span class='line'><span class="n">loaded</span> <span class="mi">33597</span> <span class="n">classes</span>
+</span><span class='line'><span class="n">java</span><span class="o">.</span><span class="na">rmi</span><span class="o">.</span><span class="na">server</span><span class="o">.</span><span class="na">Unreferenced</span>
+</span><span class='line'><span class="n">loaded</span> <span class="mi">33598</span> <span class="n">classes</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Измеряем размер java объектов</h2>
+
+<p>Рассмотрим еще один пример использования агентов. Напишем класс который будет возвращать размер java объектов и javaagent будет играть ключевую роль. <b>Кто как ни JVM может знать реальный размер созданного объекта</b>, в интерфейсе <code>Instrumentation</code>  есть замечательный метод <code>long getObjectSize(Object objectToSize)</code> который возвращает размер объекта. Но как из нашего приложения получить доступ к агенту? А делать ничего особенного и не придется,<b> javaagent автоматически добавляется в classpath</b> и нам остается только добавить в агент поле типа Instrumentation instrumentation и инициализировать его в методе premain.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kn">package</span> <span class="n">ru</span><span class="o">.</span><span class="na">ilinchik</span><span class="o">.</span><span class="na">agent</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="kn">import</span> <span class="nn">java.lang.instrument.Instrumentation</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">AgentMemoryCounter</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">private</span> <span class="kd">static</span> <span class="n">Instrumentation</span> <span class="n">instrumentation</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">premain</span><span class="o">(</span><span class="n">String</span> <span class="n">args</span><span class="o">,</span> <span class="n">Instrumentation</span> <span class="n">instrumentation</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">AgentMemoryCounter</span><span class="o">.</span><span class="na">instrumentation</span> <span class="o">=</span> <span class="n">instrumentation</span><span class="o">;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">long</span> <span class="nf">getSize</span><span class="o">(</span><span class="n">Object</span> <span class="n">obj</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">instrumentation</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="k">throw</span> <span class="k">new</span> <span class="nf">IllegalStateException</span><span class="o">(</span><span class="s">&quot;Agent not initialised&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>        <span class="k">return</span> <span class="n">instrumentation</span><span class="o">.</span><span class="na">getObjectSize</span><span class="o">(</span><span class="n">obj</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Мы получаем доступ к методу <code>AgentMemoryCounter.getSize(obj)</code> из класса приложения.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kn">package</span> <span class="n">ru</span><span class="o">.</span><span class="na">ilinchik</span><span class="o">.</span><span class="na">agent</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="kn">import</span> <span class="nn">java.math.BigDecimal</span><span class="o">;</span>
+</span><span class='line'><span class="kn">import</span> <span class="nn">java.util.ArrayList</span><span class="o">;</span>
+</span><span class='line'><span class="kn">import</span> <span class="nn">java.util.Calendar</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">AgentTester</span> <span class="o">{</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">printObjectSize</span><span class="o">(</span><span class="k">new</span> <span class="nf">Object</span><span class="o">());</span>
+</span><span class='line'>        <span class="n">printObjectSize</span><span class="o">(</span><span class="k">new</span> <span class="nf">A</span><span class="o">());</span>
+</span><span class='line'>        <span class="n">printObjectSize</span><span class="o">(</span><span class="mi">1</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">printObjectSize</span><span class="o">(</span><span class="s">&quot;string&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">printObjectSize</span><span class="o">(</span><span class="n">Calendar</span><span class="o">.</span><span class="na">getInstance</span><span class="o">());</span>
+</span><span class='line'>        <span class="n">printObjectSize</span><span class="o">(</span><span class="k">new</span> <span class="nf">BigDecimal</span><span class="o">(</span><span class="s">&quot;999999999999999.999&quot;</span><span class="o">));</span>
+</span><span class='line'>        <span class="n">printObjectSize</span><span class="o">(</span><span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;());</span>
+</span><span class='line'>        <span class="n">printObjectSize</span><span class="o">(</span><span class="k">new</span> <span class="n">Integer</span><span class="o">[</span><span class="mi">100</span><span class="o">]);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">printObjectSize</span><span class="o">(</span><span class="n">Object</span> <span class="n">obj</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">String</span><span class="o">.</span><span class="na">format</span><span class="o">(</span><span class="s">&quot;%s, size=%s&quot;</span><span class="o">,</span> <span class="n">obj</span><span class="o">.</span><span class="na">getClass</span><span class="o">()</span>
+</span><span class='line'>                <span class="o">.</span><span class="na">getSimpleName</span><span class="o">(),</span> <span class="n">AgentMemoryCounter</span><span class="o">.</span><span class="na">getSize</span><span class="o">(</span><span class="n">obj</span><span class="o">)));</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="kd">class</span> <span class="nc">A</span> <span class="o">{</span>
+</span><span class='line'>    <span class="n">Integer</span> <span class="n">id</span><span class="o">;</span>
+</span><span class='line'>    <span class="n">String</span> <span class="n">name</span><span class="o">;</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Результаты работы приложения могу выглядеть следующим образом</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">java</span> <span class="o">-</span><span class="nl">javaagent:</span><span class="n">agentMemoryCounter</span><span class="o">.</span><span class="na">jar</span> <span class="n">ru</span><span class="o">.</span><span class="na">ilinchik</span><span class="o">.</span><span class="na">agent</span><span class="o">.</span><span class="na">AgentTester</span>
+</span><span class='line'><span class="n">Agent</span> <span class="n">Counter</span>
+</span><span class='line'><span class="n">Object</span><span class="o">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">8</span>
+</span><span class='line'><span class="n">A</span><span class="o">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">16</span>
+</span><span class='line'><span class="n">Integer</span><span class="o">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">16</span>
+</span><span class='line'><span class="n">String</span><span class="o">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">24</span>
+</span><span class='line'><span class="n">GregorianCalendar</span><span class="o">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">112</span>
+</span><span class='line'><span class="n">BigDecimal</span><span class="o">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">32</span>
+</span><span class='line'><span class="n">ArrayList</span><span class="o">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">24</span>
+</span><span class='line'><span class="n">Integer</span><span class="o">[],</span> <span class="n">size</span><span class="o">=</span><span class="mi">416</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Обратите внимание что метод <code>getObjectSize()</code> не учитывает размер вложенных объектов т.е учитывается только память затраченная на ссылку на объект.</p>
+
+<h2>Заключение</h2>
+
+<p>Надеюсь этот пост помог понять предназначение javaagent-ов для тех кто никогда с ними не работал, также я пытался продемонстрировать альтернативное использование javaagent-а (не для трансформации байт-кода). А для чего вы используете в своих проектах агенты? Напишите в комментариях, было бы очень интересно.</p>
+
+<p>Первоначально опубликовал этот пост на хабре, почитать оригинал можно <a href="http://habrahabr.ru/post/230239/">тут</a></p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[JUG в каждый город]]></title>
+    <link href="http://ilinchik.github.io/blog/2015/02/07/jug-for-each-city/"/>
+    <updated>2015-02-07T00:58:39+03:00</updated>
+    <id>http://ilinchik.github.io/blog/2015/02/07/jug-for-each-city</id>
+    <content type="html"><![CDATA[<p><img class="left" src="http://habrastorage.org/getpro/habr/post_images/484/260/2a6/4842602a616898e5dc6d2718a1df1473.gif"">
+<a href="http://en.wikipedia.org/wiki/Java_User_Group" title="">Java User Groups</a>(JUGs) – это волонтерские организации Java-разработчиков призванные объединить Java-программистов, пользователей Java и IT-компании. Обычно объединенные по географическому признаку, например <a href="http://jug.msk.ru">Московское сообщество Java-разработчиков</a> или <a href="http://www.belarusjug.org">Белорусская Java User Group</a></a>. Они предоставляют место встречи для пользователей Java, чтобы обмениваться информацией, обсуждать проблемы и решения из мира Java и, прежде всего, <strong><em>пить пиво, есть пиццу и получать удовольствие.</em></strong>  <br/>
+Как создать свой JUG и зачем это надо, читаем ниже.</p>
+
+<!-- more -->
+
+
+<p><img src="http://habrastorage.org/getpro/habr/post_images/c52/bb6/002/c52bb6002abc58c8819b37e0225bdd4f.jpg""><br/>
+<em>Типичный JUG event</em></p>
+
+<p><img src="http://habrastorage.org/getpro/habr/post_images/36d/c81/d2e/36dc81d2ee90a54a7dfbcc3f74ce371f.jpg"">
+<em>JUG Пакистан</em></p>
+
+<h5>JUG в России</h5>
+
+<p>Давайте посмотрим на карту <a href="https://www.java.net/jug-profile-map">Java User Groups International Map</a>
+<img src="http://habrastorage.org/getpro/habr/post_images/305/415/3e3/3054153e36146cbccf95c05a26480975.png""></p>
+
+<p>Лично мне становится обидно, получается, на всей огромной территории нашей страны существует только Московский JUG, Питерский JUG и Омский JUG <em>(возможно есть и другие просто их нет на карте, но никакой информации о них я не нашел)</em>. Даже в Уганде и Лагосе есть свой JUG - регионы, ау!</p>
+
+<h5>Зачем это надо?</h5>
+
+<p>Всем известна ситуация на рынке труда, спрос на java – разработчиков очень высок, если в Москве еще реально найти «квалифицированные» кадры то в регионах это почти нереально.
+Периодически ко мне обращаются с такими вопросами: <br/>
+&ndash; Привет, у тебя тут остались знакомые которые знают Java? А то проект намечается.<br/>
+<em>(«тут» в городе откуда я родом, сейчас я живу в Москве)</em><br/>
+&ndash;  хм.. да, но они скорее всего заняты<br/>
+&ndash;  ну вдруг там подрос кто?<br/>
+….</p>
+
+<p>Люди уходят в фриланс, начинают стартапы и одному потянуть проект нереально. Привлечь в свои ряды гуру с 20-летним опытом вам врятли удастся, а вот начинающие, делающие первые шаги джуниоры, то что надо и площадка JUG отличное место для общения и заведения нужных знакомств.</p>
+
+<h5>Как создать свой JUG</h5>
+
+<ul>
+<li>Для начала регистрируемся на <a href="java.net">java.net</a></li>
+<li>Далее переходим на <a href="https://www.java.net//request_project.csp">страницу создания</a>, знакомимся с требованиями к проекту и жмем <em>Create Project</em></li>
+<li>Заполняем поле Project Name, это имя будет использоваться в URL имя_проекта.java.net и Description, выбираем Source License, жмем create.</li>
+</ul>
+
+
+<p>После этого вам на почту придет поздравление с тем, что ваш проект успешно создан.</p>
+
+<p>Итак, наш проект создан, давайте посмотрим что нам предоставляет java.net</p>
+
+<ul>
+<li> багтрекер – можно выбрать JIRA или Bugzilla</li>
+<li> репозиторий – subversion, mercurial или git</li>
+<li> список рассылок</li>
+<li> файловое хранилище</li>
+<li> форум</li>
+<li> чат</li>
+<li> wiki</li>
+<li> и еще какие-то мелочи</li>
+</ul>
+
+
+<p>JUG создан, но на данный момент он является приватным, его нет в<a href="https://www.java.net/jugs-list-alphabetical">Jugs List</a> и нет на <a href="https://www.java.net/jug-profile-map">карте</a>. Чтобы сделать проект публичным, нужно в свободной форме написать менеджеру <em>(Java.net Community Manager)</em> с просьбой открыть проект. Если все ок, через некоторое время (несколько часов) вам ответят и откроют проект.
+Чтобы добавить ваш JUG на карту - <a href="https://www.java.net/jug-profile-map">Java User Groups International Map</a> нужно на почту комъюнити менеджера отправить xml определенного вида, например:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="nt">&lt;Placemark&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;name&gt;</span>Baikal Web Developer JUG<span class="nt">&lt;/name&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;description&gt;</span>
+</span><span class='line'>        <span class="cp">&lt;![CDATA[ </span>
+</span><span class='line'><span class="cp">            Up to a maximum of 250 characters of general group description text can precede</span>
+</span><span class='line'><span class="cp">            the JUG Leader and JUG Site information.&lt;br/&gt;</span>
+</span><span class='line'><span class="cp">            &lt;b&gt;Leaders:&lt;/b&gt; &lt;a href=&quot;http://ilinchik.ru&quot;&gt;Anton Ilinchik&lt;/a&gt; &lt;br/&gt;</span>
+</span><span class='line'><span class="cp">            &lt;b&gt;Site:&lt;/b&gt; https://baikal.java.net/</span>
+</span><span class='line'><span class="cp">        ]]&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;/description&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;Point&gt;</span>
+</span><span class='line'>            <span class="nt">&lt;coordinates&gt;</span>107.600000,51.833333,0<span class="nt">&lt;/coordinates&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;/Point&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;styleUrl&gt;</span>#jugStyle<span class="nt">&lt;/styleUrl&gt;</span>
+</span><span class='line'><span class="nt">&lt;/Placemark&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>И новый JUG появится на карте
+<img src="http://habrastorage.org/getpro/habr/post_images/f72/4a1/e82/f724a1e82bb9bf56aaf4f44abcb0a615.png""></p>
+
+<p>Теперь ваш JUG официально зарегистрирован, он есть в списке и на карте, теперь дело за малым – готовим доклады, ищем спонсоров, закупаем пиво и пиццу и возможно вас ждет успех <a href="www.bejug.org">BeJUG</a> (Belgium Java User Group) который перерос в огромную конференцию <a href="http://www.devoxx.com/">Devoxx</a>.</p>
+
+<p>Первоначально опубликовал этот пост на хабре, почитать оригинал можно <a href="http://habrahabr.ru/post/198910/">тут</a></p>
+]]></content>
+  </entry>
+  
+</feed>

@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Jug | Anton Ilinchik's Blog]]></title>
+  <link href="http://ilinchik.github.io/blog/categories/jug/atom.xml" rel="self"/>
+  <link href="http://ilinchik.github.io/"/>
+  <updated>2015-02-18T23:36:38+03:00</updated>
+  <id>http://ilinchik.github.io/</id>
+  <author>
+    <name><![CDATA[Anton Ilinchik]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[JUG в каждый город]]></title>
+    <link href="http://ilinchik.github.io/blog/2015/02/07/jug-for-each-city/"/>
+    <updated>2015-02-07T00:58:39+03:00</updated>
+    <id>http://ilinchik.github.io/blog/2015/02/07/jug-for-each-city</id>
+    <content type="html"><![CDATA[<p><img class="left <a" src="href="http://habrastorage.org/getpro/habr/post_images/484/260/2a6/4842602a616898e5dc6d2718a1df1473.gif">http://habrastorage.org/getpro/habr/post_images/484/260/2a6/4842602a616898e5dc6d2718a1df1473.gif</a>&#8221;&#8221;>
+<a href="http://en.wikipedia.org/wiki/Java_User_Group" title="">Java User Groups</a>(JUGs) – это волонтерские организации Java-разработчиков призванные объединить Java-программистов, пользователей Java и IT-компании. Обычно объединенные по географическому признаку, например <a href="http://jug.msk.ru">Московское сообщество Java-разработчиков</a> или <a href="http://www.belarusjug.org">Белорусская Java User Group</a></a>. Они предоставляют место встречи для пользователей Java, чтобы обмениваться информацией, обсуждать проблемы и решения из мира Java и, прежде всего, <strong><em>пить пиво, есть пиццу и получать удовольствие.</em></strong>  <br/>
+Как создать свой JUG и зачем это надо, читаем ниже.</p>
+
+<!-- more -->
+
+
+<p><img class="<a" src="href="http://habrastorage.org/getpro/habr/post_images/c52/bb6/002/c52bb6002abc58c8819b37e0225bdd4f.jpg">http://habrastorage.org/getpro/habr/post_images/c52/bb6/002/c52bb6002abc58c8819b37e0225bdd4f.jpg</a>&#8221;&#8221;><br/>
+<em>Типичный JUG event</em></p>
+
+<p><img class="<a" src="href="http://habrastorage.org/getpro/habr/post_images/36d/c81/d2e/36dc81d2ee90a54a7dfbcc3f74ce371f.jpg">http://habrastorage.org/getpro/habr/post_images/36d/c81/d2e/36dc81d2ee90a54a7dfbcc3f74ce371f.jpg</a>&#8221;&#8221;>
+<em>JUG Пакистан</em></p>
+
+<h5>JUG в России</h5>
+
+<p>Давайте посмотрим на карту <a href="https://www.java.net/jug-profile-map">Java User Groups International Map</a>
+<img class="<a" src="href="http://habrastorage.org/getpro/habr/post_images/305/415/3e3/3054153e36146cbccf95c05a26480975.png">http://habrastorage.org/getpro/habr/post_images/305/415/3e3/3054153e36146cbccf95c05a26480975.png</a>&#8221;&#8221;></p>
+
+<p>Лично мне становится обидно, получается, на всей огромной территории нашей страны существует только Московский JUG, Питерский JUG и Омский JUG <em>(возможно есть и другие просто их нет на карте, но никакой информации о них я не нашел)</em>. Даже в Уганде и Лагосе есть свой JUG - регионы, ау!</p>
+
+<h5>Зачем это надо?</h5>
+
+<p>Всем известна ситуация на рынке труда, спрос на java – разработчиков очень высок, если в Москве еще реально найти «квалифицированные» кадры то в регионах это почти нереально.
+Периодически ко мне обращаются с такими вопросами: <br/>
+&ndash; Привет, у тебя тут остались знакомые которые знают Java? А то проект намечается.<br/>
+<em>(«тут» в городе откуда я родом, сейчас я живу в Москве)</em><br/>
+&ndash;  хм.. да, но они скорее всего заняты<br/>
+&ndash;  ну вдруг там подрос кто?<br/>
+….</p>
+
+<p>Люди уходят в фриланс, начинают стартапы и одному потянуть проект нереально. Привлечь в свои ряды гуру с 20-летним опытом вам врятли удастся, а вот начинающие, делающие первые шаги джуниоры, то что надо и площадка JUG отличное место для общения и заведения нужных знакомств.</p>
+
+<h5>Как создать свой JUG</h5>
+
+<ul>
+<li>Для начала регистрируемся на <a href="java.net">java.net</a></li>
+<li>Далее переходим на <a href="https://www.java.net//request_project.csp">страницу создания</a>, знакомимся с требованиями к проекту и жмем <em>Create Project</em></li>
+<li>Заполняем поле Project Name, это имя будет использоваться в URL имя_проекта.java.net и Description, выбираем Source License, жмем create.</li>
+</ul>
+
+
+<p>После этого вам на почту придет поздравление с тем, что ваш проект успешно создан.</p>
+
+<p>Итак, наш проект создан, давайте посмотрим что нам предоставляет java.net</p>
+
+<ul>
+<li> багтрекер – можно выбрать JIRA или Bugzilla</li>
+<li> репозиторий – subversion, mercurial или git</li>
+<li> список рассылок</li>
+<li> файловое хранилище</li>
+<li> форум</li>
+<li> чат</li>
+<li> wiki</li>
+<li> и еще какие-то мелочи</li>
+</ul>
+
+
+<p>JUG создан, но на данный момент он является приватным, его нет в<a href="https://www.java.net/jugs-list-alphabetical">Jugs List</a> и нет на <a href="https://www.java.net/jug-profile-map">карте</a>. Чтобы сделать проект публичным, нужно в свободной форме написать менеджеру <em>(Java.net Community Manager)</em> с просьбой открыть проект. Если все ок, через некоторое время (несколько часов) вам ответят и откроют проект.
+Чтобы добавить ваш JUG на карту - <a href="https://www.java.net/jug-profile-map">Java User Groups International Map</a> нужно на почту комъюнити менеджера отправить xml определенного вида, например:</p>
+
+<pre><code class="xml">&lt;Placemark&gt;
+        &lt;name&gt;Baikal Web Developer JUG&lt;/name&gt;
+        &lt;description&gt;
+        &lt;![CDATA[ 
+            Up to a maximum of 250 characters of general group description text can precede
+            the JUG Leader and JUG Site information.&lt;br/&gt;
+            &lt;b&gt;Leaders:&lt;/b&gt; &lt;a href="http://ilinchik.ru"&gt;Anton Ilinchik&lt;/a&gt; &lt;br/&gt;
+            &lt;b&gt;Site:&lt;/b&gt; https://baikal.java.net/
+        ]]&gt;
+        &lt;/description&gt;
+        &lt;Point&gt;
+            &lt;coordinates&gt;107.600000,51.833333,0&lt;/coordinates&gt;
+        &lt;/Point&gt;
+        &lt;styleUrl&gt;#jugStyle&lt;/styleUrl&gt;
+&lt;/Placemark&gt;
+</code></pre>
+
+<p>И новый JUG появится на карте
+<img class="<a" src="href="http://habrastorage.org/getpro/habr/post_images/f72/4a1/e82/f724a1e82bb9bf56aaf4f44abcb0a615.png">http://habrastorage.org/getpro/habr/post_images/f72/4a1/e82/f724a1e82bb9bf56aaf4f44abcb0a615.png</a>&#8221;&#8221;></p>
+
+<p>Теперь ваш JUG официально зарегистрирован, он есть в списке и на карте, теперь дело за малым – готовим доклады, ищем спонсоров, закупаем пиво и пиццу и возможно вас ждет успех <a href="www.bejug.org">BeJUG</a> (Belgium Java User Group) который перерос в огромную конференцию <a href="http://www.devoxx.com/">Devoxx</a>.</p>
+
+<p>Первоначально опубликовал этот пост на хабре, почитать оригинал можно <a href="http://habrahabr.ru/post/198910/">тут</a></p>
+]]></content>
+  </entry>
+  
+</feed>

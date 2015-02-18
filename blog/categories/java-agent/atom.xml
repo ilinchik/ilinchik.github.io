@@ -1,0 +1,361 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Java Agent | Anton Ilinchik's Blog]]></title>
+  <link href="http://ilinchik.github.io/blog/categories/java-agent/atom.xml" rel="self"/>
+  <link href="http://ilinchik.github.io/"/>
+  <updated>2015-02-18T23:36:38+03:00</updated>
+  <id>http://ilinchik.github.io/</id>
+  <author>
+    <name><![CDATA[Anton Ilinchik]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Java Agent на службе JVM]]></title>
+    <link href="http://ilinchik.github.io/blog/2015/02/07/java-agent/"/>
+    <updated>2015-02-07T01:19:35+03:00</updated>
+    <id>http://ilinchik.github.io/blog/2015/02/07/java-agent</id>
+    <content type="html"><![CDATA[<p><img class="left <a" src="href="http://habrastorage.org/getpro/habr/post_images/0d6/cea/505/0d6cea5059f39fac1c6522285bd73794.png">http://habrastorage.org/getpro/habr/post_images/0d6/cea/505/0d6cea5059f39fac1c6522285bd73794.png</a>&#8221;&#8221;>
+Наверное многие слышали или сталкивались с таким параметром JVM как -javaagent, увидеть этот параметр вы могли используя <a href="http://zeroturnaround.com/software/jrebel">Jrebel</a> или <a href="https://plumbr.eu">Plumbr</a> это могло выглядеть например так <code>JAVA_OPTS=-javaagent:[path/to/]jrebel.jar</code> или так <code>-javaagent:/path-to/plumbr.jar</code>
+Хотя <strong>javaagent</strong> появился еще в версии java 1.5, многие разработчики так никогда и не использовали возможности агентов и имеют смутное представление что это такое.<br/>
+Что же это за агент? Зачем он может нам понадобиться и как написать свой?</p>
+
+<!-- more -->
+
+
+<h2>Что такое javaagent</h2>
+
+<p>Как я написал выше javaagent это один из параметров JVM, который позволяет указать агент который будет запущен с вашим приложением, а точнее он будет запущен еще перед запуском вашего приложения. Сам агент это отдельное приложение которое предоставляет доступ к механизму манипуляции байт-кодом (<code>java.lang.instrument</code>) в runtime. Это если вкратце. Официальную документацию можно почитать <a href="http://docs.oracle.com/javase/8/docs/api/java/lang/instrument/package-summary.html">тут</a>, но она довольно скудная. Ничего непонятно? Итак, давайте разбираться. Лучше всего разбираться на примерах.</p>
+
+<h2>Напишем элементарный агент</h2>
+
+<p><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kn">package</span> <span class="n">ru</span><span class="o">.</span><span class="na">ilinchik</span><span class="o">.</span><span class="na">agent</span><span class="o">;&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Agent007</span> <span class="o">{</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">premain</span><span class="o">(</span><span class="n">String</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(&amp;</span><span class="n">ldquo</span><span class="o">;</span><span class="n">Hello</span><span class="o">!</span> <span class="n">I</span><span class="err">`</span><span class="n">m</span> <span class="n">java</span> <span class="n">agent</span><span class="o">&amp;</span><span class="n">rdquo</span><span class="o">;);</span>      <span class="o">&lt;</span><span class="n">br</span><span class="o">/&gt;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+Обратите внимание, агент обязательно должен реализовывать метод <strong>premain</strong> со следующей сигнатурой<br/>
+<code>public static void premain(String args); </code><br/>
+или<br/>
+<code>public static void premain(String args, Instrumentation inst);</code></p>
+
+<p>Класс агента должен быть упакован в jar и содержать <code>MANIFEST.MF</code>, с обязательным атрибутом
+<strong>PreMain-Class</strong> - указывает на класс агента с premain методом. Есть и другие атрибуты агента, но они необязательные и сейчас  нам не понадобятся.</p>
+
+<p>Вот так будет выглядеть наш manifest.mf.
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">Manifest</span><span class="o">-</span><span class="nl">Version:</span> <span class="mf">1.0</span>
+</span><span class='line'><span class="n">PreMain</span><span class="o">-</span><span class="nl">Class:</span> <span class="n">ru</span><span class="o">.</span><span class="na">ilinchik</span><span class="o">.</span><span class="na">agent</span><span class="o">.</span><span class="na">Agent007</span><span class="o">&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="err">```</span> <span class="o">&lt;</span><span class="n">em</span><span class="o">&gt;</span><span class="n">не</span> <span class="n">забудьте</span> <span class="n">добавить</span> <span class="n">перевод</span> <span class="n">строки</span> <span class="n">в</span> <span class="n">конец</span> <span class="n">файла</span><span class="o">&lt;/</span><span class="n">em</span><span class="o">&gt;&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="n">Теперь</span> <span class="n">упакуем</span> <span class="n">все</span> <span class="n">это</span> <span class="n">в</span> <span class="n">jar</span>
+</span><span class='line'><span class="o">&lt;</span><span class="n">code</span><span class="o">&gt;</span>
+</span><span class='line'><span class="n">jar</span> <span class="o">-</span><span class="n">cvfm</span> <span class="n">Agent007</span><span class="o">.</span><span class="na">jar</span> <span class="n">manifest</span><span class="o">.</span><span class="na">mf</span>  <span class="n">ru</span><span class="o">/</span><span class="n">ilinchik</span><span class="o">/</span><span class="n">agent</span><span class="o">/</span><span class="n">Agent007</span><span class="o">.</span><span class="na">class</span>
+</span><span class='line'><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;</span>
+</span><span class='line'><span class="n">И</span> <span class="n">наконец</span> <span class="n">класс</span> <span class="n">испытатель</span>
+</span></code></pre></td></tr></table></div></figure> java
+package ru.ilinchik.agent;</p>
+
+<p>public class AgentTester {
+    public static void main(String[] args) {
+        System.out.println(&ldquo;Hello! I<code>m agent tester");
+    }
+}
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">Запускаем</span> <span class="n">AgentTester</span> <span class="n">из</span> <span class="n">командной</span> <span class="n">строки</span>
+</span></code></pre></td></tr></table></div></figure>
+java -javaagent:Agent007.jar ru.ilinchik.agent.AgentTester
+Hello! I</code>m java agent
+Hello! I`m agent tester
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+<span class='line-number'>57</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">Из</span> <span class="n">этого</span> <span class="n">примера</span> <span class="n">видно</span> <span class="nl">что:</span><span class="o">&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">ul</span><span class="o">&gt;</span>
+</span><span class='line'><span class="o">&lt;</span><span class="n">li</span><span class="o">&gt;</span><span class="n">метод</span> <span class="o">&lt;</span><span class="n">b</span><span class="o">&gt;</span><span class="n">premain</span><span class="o">&lt;/</span><span class="n">b</span><span class="o">&gt;</span> <span class="n">исполняется</span> <span class="n">еще</span> <span class="n">до</span> <span class="n">вызова</span> <span class="n">метода</span> <span class="o">&lt;</span><span class="n">b</span><span class="o">&gt;</span><span class="n">main</span><span class="o">&lt;/</span><span class="n">b</span><span class="o">&gt;</span> <span class="n">основного</span> <span class="n">приложения</span><span class="o">.&lt;/</span><span class="n">li</span><span class="o">&gt;</span>
+</span><span class='line'><span class="o">&lt;</span><span class="n">li</span><span class="o">&gt;</span><span class="n">агент</span> <span class="n">указывается</span> <span class="n">с</span> <span class="n">помощью</span> <span class="n">параметра</span> <span class="o">&lt;</span><span class="n">code</span><span class="o">&gt;-</span><span class="nl">javaagent:</span><span class="n">jarpath</span><span class="o">[=</span><span class="n">options</span><span class="o">]&lt;/</span><span class="n">code</span><span class="o">&gt;&lt;/</span><span class="n">li</span><span class="o">&gt;</span>
+</span><span class='line'><span class="o">&lt;/</span><span class="n">ul</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">h2</span><span class="o">&gt;</span><span class="n">Давайте</span> <span class="n">попробуем</span> <span class="n">извлечь</span> <span class="n">из</span> <span class="n">агента</span> <span class="n">какую</span><span class="o">-</span><span class="n">нибудь</span> <span class="n">пользу</span><span class="o">&lt;/</span><span class="n">h2</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="n">Вообще</span> <span class="o">&lt;</span><span class="n">strong</span><span class="o">&gt;&lt;</span><span class="n">em</span><span class="o">&gt;</span><span class="n">механизм</span> <span class="n">агентов</span> <span class="n">предназначен</span> <span class="n">для</span> <span class="n">манипуляции</span> <span class="n">байт</span><span class="o">-</span><span class="n">кодом</span><span class="o">&lt;/</span><span class="n">em</span><span class="o">&gt;&lt;/</span><span class="n">strong</span><span class="o">&gt;,</span> <span class="n">но</span> <span class="n">скажу</span> <span class="n">сразу</span> <span class="n">модифицировать</span> <span class="n">байт</span><span class="o">-</span><span class="n">код</span> <span class="n">в</span> <span class="n">этой</span> <span class="n">статье</span> <span class="n">мы</span> <span class="n">не</span> <span class="n">будем</span> <span class="n">иначе</span> <span class="n">можно</span> <span class="n">уйти</span> <span class="n">далеко</span><span class="o">-</span><span class="n">далеко</span> <span class="n">за</span> <span class="n">пределы</span> <span class="n">этого</span> <span class="n">поста</span><span class="o">.</span> <span class="n">Кому</span> <span class="n">интересно</span> <span class="n">можно</span> <span class="n">посмотреть</span> <span class="n">на</span> <span class="o">&lt;</span><span class="n">a</span> <span class="n">href</span><span class="o">=</span><span class="s">&quot;http://www.csg.ci.i.u-tokyo.ac.jp/~chiba/javassist/&quot;</span><span class="o">&gt;</span><span class="n">javassist</span><span class="o">&lt;/</span><span class="n">a</span><span class="o">&gt;</span> <span class="n">так</span> <span class="n">как</span> <span class="n">стандартных</span> <span class="n">средств</span> <span class="n">для</span> <span class="n">работы</span> <span class="n">с</span> <span class="n">байт</span><span class="o">-</span><span class="n">кодом</span> <span class="n">нет</span><span class="o">.&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="n">Напишем</span> <span class="n">AgentCounter</span> <span class="n">который</span> <span class="n">будет</span> <span class="n">выводить</span> <span class="n">имя</span> <span class="n">загружаемого</span> <span class="n">класс</span> <span class="n">и</span> <span class="n">подсчитывать</span> <span class="n">кол</span><span class="o">-</span><span class="n">во</span> <span class="n">загруженных</span> <span class="n">классов</span><span class="o">.</span> <span class="n">Так</span> <span class="n">мы</span> <span class="n">сможем</span> <span class="n">понаблюдать</span> <span class="n">за</span> <span class="n">работой</span> <span class="n">classloader</span><span class="err">`</span><span class="n">a</span><span class="o">.&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span> <span class="n">class</span><span class="o">=</span><span class="s">&quot;java&quot;</span><span class="o">&gt;</span><span class="kn">package</span> <span class="n">ru</span><span class="o">.</span><span class="na">ilinchik</span><span class="o">.</span><span class="na">agent</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="kn">import</span> <span class="nn">java.lang.instrument.Instrumentation</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">AgentCounter</span> <span class="o">{</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">premain</span><span class="o">(</span><span class="n">String</span> <span class="n">agentArgument</span><span class="o">,</span> <span class="n">Instrumentation</span> <span class="n">instrumentation</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;Agent Counter&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">instrumentation</span><span class="o">.</span><span class="na">addTransformer</span><span class="o">(</span><span class="k">new</span> <span class="nf">ClassTransformer</span><span class="o">());</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;&lt;/</span><span class="n">pre</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="n">Обратите</span> <span class="n">внимание</span><span class="o">,</span> <span class="n">теперь</span> <span class="n">я</span> <span class="n">использую</span> <span class="n">другую</span> <span class="n">сигнатуру</span> <span class="n">метода</span> <span class="n">premain</span><span class="o">.</span> <span class="n">В</span> <span class="n">объект</span> <span class="n">instrumentation</span> <span class="n">я</span> <span class="n">передаю</span> <span class="n">ClassTransformer</span> <span class="n">который</span> <span class="n">и</span> <span class="n">выполняет</span> <span class="n">всю</span> <span class="n">работу</span><span class="o">.</span> <span class="n">ClassTransformer</span> <span class="n">будет</span> <span class="n">срабатывать</span> <span class="n">каждый</span> <span class="n">раз</span> <span class="n">при</span> <span class="n">загрузке</span> <span class="n">класса</span><span class="o">.</span> <span class="n">Если</span> <span class="n">вы</span> <span class="n">хотите</span> <span class="n">использовать</span> <span class="n">свой</span> <span class="n">ClassTransformer</span><span class="o">,</span> <span class="n">вы</span> <span class="n">должны</span> <span class="n">реализовать</span> <span class="n">интерфейс</span> <span class="o">&lt;</span><span class="n">code</span><span class="o">&gt;</span><span class="n">java</span><span class="o">.</span><span class="na">lang</span><span class="o">.</span><span class="na">instrument</span><span class="o">.</span><span class="na">ClassFileTransformer</span><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;</span> <span class="n">и</span> <span class="n">добавить</span> <span class="n">свой</span> <span class="n">объект</span> <span class="n">через</span> <span class="n">метод</span> <span class="o">&lt;</span><span class="n">code</span><span class="o">&gt;</span><span class="n">Instrumentation</span><span class="o">.</span><span class="na">addTransformer</span><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span> <span class="n">class</span><span class="o">=</span><span class="s">&quot;java&quot;</span><span class="o">&gt;</span><span class="kn">package</span> <span class="n">ru</span><span class="o">.</span><span class="na">ilinchik</span><span class="o">.</span><span class="na">agent</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="kn">import</span> <span class="nn">java.lang.instrument.ClassFileTransformer</span><span class="o">;</span>
+</span><span class='line'><span class="kn">import</span> <span class="nn">java.security.ProtectionDomain</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ClassTransformer</span> <span class="kd">implements</span> <span class="n">ClassFileTransformer</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">private</span> <span class="kd">static</span> <span class="kt">int</span> <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nd">@Override</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kt">byte</span><span class="o">[]</span> <span class="nf">transform</span><span class="o">(</span><span class="n">ClassLoader</span> <span class="n">loader</span><span class="o">,</span>
+</span><span class='line'>                            <span class="n">String</span> <span class="n">className</span><span class="o">,</span>
+</span><span class='line'>                            <span class="n">Class</span><span class="o">&amp;</span><span class="n">lt</span><span class="o">;?&amp;</span><span class="n">gt</span><span class="o">;</span> <span class="n">classBeingRedefined</span><span class="o">,</span>
+</span><span class='line'>                            <span class="n">ProtectionDomain</span> <span class="n">protectionDomain</span><span class="o">,</span>
+</span><span class='line'>                            <span class="kt">byte</span><span class="o">[]</span> <span class="n">classfileBuffer</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;load class: &quot;</span> <span class="o">+</span> <span class="n">className</span><span class="o">.</span><span class="na">replaceAll</span><span class="o">(</span><span class="s">&quot;/&quot;</span><span class="o">,</span> <span class="s">&quot;.&quot;</span><span class="o">));</span>
+</span><span class='line'>        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">String</span><span class="o">.</span><span class="na">format</span><span class="o">(</span><span class="s">&quot;loaded %s classes&quot;</span><span class="o">,</span> <span class="o">++</span><span class="n">count</span><span class="o">));</span>
+</span><span class='line'>        <span class="k">return</span> <span class="n">classfileBuffer</span><span class="o">;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;&lt;/</span><span class="n">pre</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="n">classfileBuffer</span> <span class="o">-</span> <span class="n">это</span> <span class="n">и</span> <span class="n">есть</span> <span class="n">байт</span><span class="o">-</span><span class="n">код</span> <span class="n">текущего</span> <span class="n">класса</span> <span class="n">представленный</span> <span class="n">в</span> <span class="n">виде</span> <span class="n">массива</span> <span class="n">байт</span><span class="o">,</span> <span class="n">для</span> <span class="n">его</span> <span class="n">переопределения</span> <span class="n">трансформер</span> <span class="n">должен</span> <span class="n">вернуть</span> <span class="n">новый</span> <span class="n">массив</span> <span class="n">байт</span><span class="o">,</span> <span class="n">в</span> <span class="n">данном</span> <span class="n">примере</span> <span class="n">мы</span> <span class="n">не</span> <span class="n">меняем</span> <span class="n">содержимое</span> <span class="n">класса</span> <span class="n">поэтому</span> <span class="n">просто</span> <span class="n">возвращаем</span> <span class="n">тот</span> <span class="n">же</span> <span class="n">массив</span><span class="o">.&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="n">Пакуем</span> <span class="n">агент</span> <span class="n">и</span> <span class="n">трансформер</span> <span class="n">в</span> <span class="n">новый</span> <span class="n">jar</span>
+</span><span class='line'><span class="o">&lt;</span><span class="n">code</span><span class="o">&gt;</span>
+</span><span class='line'><span class="n">jar</span> <span class="o">-</span><span class="n">cvfm</span> <span class="n">agentCounter</span><span class="o">.</span><span class="na">jar</span> <span class="n">manifest</span><span class="o">.</span><span class="na">mf</span>  <span class="n">ru</span><span class="o">/</span><span class="n">ilinchik</span><span class="o">/</span><span class="n">agent</span><span class="o">/</span><span class="n">AgentCounter</span><span class="o">.</span><span class="na">class</span> <span class="n">ru</span><span class="o">/</span><span class="n">ilinchik</span><span class="o">/</span><span class="n">agent</span><span class="o">/</span><span class="n">ClassTransformer</span><span class="o">.</span><span class="na">class</span>
+</span><span class='line'><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;</span>
+</span><span class='line'><span class="n">Немного</span> <span class="n">модифицируем</span> <span class="n">класс</span> <span class="n">тестер</span>
+</span></code></pre></td></tr></table></div></figure> java
+package ru.ilinchik.agent;</p>
+
+<p>public class AgentTester {
+    public static void main(String[] args) {
+        A a = new A();
+        B b = new B();        <br/>
+        C c = null;
+    }
+}</p>
+
+<p>class A {};
+class B {};
+class C {};
+<code>
+Запускаем AgentTester c новым агентом
+</code>
+java -javaagent:agentCounter.jar ru.ilinchik.agent.AgentTester
+Agent Counter
+load class: sun.launcher.LauncherHelper
+loaded 1 classes
+load class: ru.ilinchik.agent.AgentTester
+loaded 2 classes
+load class: ru.ilinchik.agent.A
+loaded 3 classes
+load class: ru.ilinchik.agent.B
+loaded 4 classes
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="o">&lt;</span><span class="n">em</span><span class="o">&gt;</span><span class="n">для</span> <span class="n">разных</span> <span class="n">версий</span> <span class="n">java</span> <span class="n">результаты</span> <span class="n">могут</span> <span class="n">отличаться</span><span class="o">&lt;/</span><span class="n">em</span><span class="o">&gt;&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="n">Если</span> <span class="n">запустить</span> <span class="n">какое</span><span class="o">-</span><span class="n">нибудь</span> <span class="n">enterprise</span> <span class="n">приложение</span> <span class="n">с</span> <span class="n">таким</span> <span class="n">агентом</span><span class="o">,</span> <span class="n">можно</span> <span class="n">получить</span> <span class="n">довольно</span> <span class="n">интересные</span> <span class="n">результаты</span><span class="o">,</span> <span class="n">например</span> <span class="n">один</span> <span class="n">из</span> <span class="n">проектов</span> <span class="n">после</span> <span class="n">старта</span> <span class="n">выдал</span> <span class="n">мне</span> <span class="nl">следующее:</span>
+</span><span class='line'><span class="o">&lt;</span><span class="n">code</span><span class="o">&gt;</span>
+</span><span class='line'><span class="n">sun</span><span class="o">.</span><span class="na">reflect</span><span class="o">.</span><span class="na">GeneratedMethodAccessor230</span>
+</span><span class='line'><span class="n">loaded</span> <span class="mi">33597</span> <span class="n">classes</span>
+</span><span class='line'><span class="n">java</span><span class="o">.</span><span class="na">rmi</span><span class="o">.</span><span class="na">server</span><span class="o">.</span><span class="na">Unreferenced</span>
+</span><span class='line'><span class="n">loaded</span> <span class="mi">33598</span> <span class="n">classes</span>
+</span><span class='line'><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">h2</span><span class="o">&gt;</span><span class="n">Измеряем</span> <span class="n">размер</span> <span class="n">java</span> <span class="n">объектов</span><span class="o">&lt;/</span><span class="n">h2</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="n">Рассмотрим</span> <span class="n">еще</span> <span class="n">один</span> <span class="n">пример</span> <span class="n">использования</span> <span class="n">агентов</span><span class="o">.</span> <span class="n">Напишем</span> <span class="n">класс</span> <span class="n">который</span> <span class="n">будет</span> <span class="n">возвращать</span> <span class="n">размер</span> <span class="n">java</span> <span class="n">объектов</span> <span class="n">и</span> <span class="n">javaagent</span> <span class="n">будет</span> <span class="n">играть</span> <span class="n">ключевую</span> <span class="n">роль</span><span class="o">.</span> <span class="o">&lt;</span><span class="n">b</span><span class="o">&gt;</span><span class="n">Кто</span> <span class="n">как</span> <span class="n">ни</span> <span class="n">JVM</span> <span class="n">может</span> <span class="n">знать</span> <span class="n">реальный</span> <span class="n">размер</span> <span class="n">созданного</span> <span class="n">объекта</span><span class="o">&lt;/</span><span class="n">b</span><span class="o">&gt;,</span> <span class="n">в</span> <span class="n">интерфейсе</span> <span class="o">&lt;</span><span class="n">code</span><span class="o">&gt;</span><span class="n">Instrumentation</span><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;</span>  <span class="n">есть</span> <span class="n">замечательный</span> <span class="n">метод</span> <span class="o">&lt;</span><span class="n">code</span><span class="o">&gt;</span><span class="kt">long</span> <span class="nf">getObjectSize</span><span class="o">(</span><span class="n">Object</span> <span class="n">objectToSize</span><span class="o">)&lt;/</span><span class="n">code</span><span class="o">&gt;</span> <span class="n">который</span> <span class="n">возвращает</span> <span class="n">размер</span> <span class="n">объекта</span><span class="o">.</span> <span class="n">Но</span> <span class="n">как</span> <span class="n">из</span> <span class="n">нашего</span> <span class="n">приложения</span> <span class="n">получить</span> <span class="n">доступ</span> <span class="n">к</span> <span class="n">агенту</span><span class="o">?</span> <span class="n">А</span> <span class="n">делать</span> <span class="n">ничего</span> <span class="n">особенного</span> <span class="n">и</span> <span class="n">не</span> <span class="n">придется</span><span class="o">,&lt;</span><span class="n">b</span><span class="o">&gt;</span> <span class="n">javaagent</span> <span class="n">автоматически</span> <span class="n">добавляется</span> <span class="n">в</span> <span class="n">classpath</span><span class="o">&lt;/</span><span class="n">b</span><span class="o">&gt;</span> <span class="n">и</span> <span class="n">нам</span> <span class="n">остается</span> <span class="n">только</span> <span class="n">добавить</span> <span class="n">в</span> <span class="n">агент</span> <span class="n">поле</span> <span class="n">типа</span> <span class="n">Instrumentation</span> <span class="n">instrumentation</span> <span class="n">и</span> <span class="n">инициализировать</span> <span class="n">его</span> <span class="n">в</span> <span class="n">методе</span> <span class="n">premain</span><span class="o">.&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span> <span class="n">class</span><span class="o">=</span><span class="s">&quot;java&quot;</span><span class="o">&gt;</span><span class="kn">package</span> <span class="n">ru</span><span class="o">.</span><span class="na">ilinchik</span><span class="o">.</span><span class="na">agent</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="kn">import</span> <span class="nn">java.lang.instrument.Instrumentation</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">AgentMemoryCounter</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">private</span> <span class="kd">static</span> <span class="n">Instrumentation</span> <span class="n">instrumentation</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">premain</span><span class="o">(</span><span class="n">String</span> <span class="n">args</span><span class="o">,</span> <span class="n">Instrumentation</span> <span class="n">instrumentation</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">AgentMemoryCounter</span><span class="o">.</span><span class="na">instrumentation</span> <span class="o">=</span> <span class="n">instrumentation</span><span class="o">;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">long</span> <span class="nf">getSize</span><span class="o">(</span><span class="n">Object</span> <span class="n">obj</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">instrumentation</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="k">throw</span> <span class="k">new</span> <span class="nf">IllegalStateException</span><span class="o">(</span><span class="s">&quot;Agent not initialised&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>        <span class="k">return</span> <span class="n">instrumentation</span><span class="o">.</span><span class="na">getObjectSize</span><span class="o">(</span><span class="n">obj</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;&lt;/</span><span class="n">pre</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="n">Мы</span> <span class="n">получаем</span> <span class="n">доступ</span> <span class="n">к</span> <span class="n">методу</span> <span class="o">&lt;</span><span class="n">code</span><span class="o">&gt;</span><span class="n">AgentMemoryCounter</span><span class="o">.</span><span class="na">getSize</span><span class="o">(</span><span class="n">obj</span><span class="o">)&lt;/</span><span class="n">code</span><span class="o">&gt;</span> <span class="n">из</span> <span class="n">класса</span> <span class="n">приложения</span><span class="o">.</span>
+</span></code></pre></td></tr></table></div></figure> java
+package ru.ilinchik.agent;</p>
+
+<p>import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Calendar;</p>
+
+<p>public class AgentTester {
+    public static void main(String[] args) {
+        printObjectSize(new Object());
+        printObjectSize(new A());
+        printObjectSize(1);
+        printObjectSize(&ldquo;string&rdquo;);
+        printObjectSize(Calendar.getInstance());
+        printObjectSize(new BigDecimal(&ldquo;999999999999999.999&rdquo;));
+        printObjectSize(new ArrayList<String>());
+        printObjectSize(new Integer[100]);
+    }</p>
+
+<pre><code>public static void printObjectSize(Object obj) {
+    System.out.println(String.format("%s, size=%s", obj.getClass()
+            .getSimpleName(), AgentMemoryCounter.getSize(obj)));
+}
+</code></pre>
+
+<p>}</p>
+
+<p>class A {
+    Integer id;
+    String name;
+}
+<code>
+Результаты работы приложения могу выглядеть следующим образом
+</code>
+java -javaagent:agentMemoryCounter.jar ru.ilinchik.agent.AgentTester
+Agent Counter
+Object, size=8
+A, size=16
+Integer, size=16
+String, size=24
+GregorianCalendar, size=112
+BigDecimal, size=32
+ArrayList, size=24
+Integer[], size=416
+&#8220;`
+Обратите внимание что метод <code>getObjectSize()</code> не учитывает размер вложенных объектов т.е учитывается только память затраченная на ссылку на объект.</p>
+
+<h2>Заключение</h2>
+
+<p>Надеюсь этот пост помог понять предназначение javaagent-ов для тех кто никогда с ними не работал, также я пытался продемонстрировать альтернативное использование javaagent-а (не для трансформации байт-кода). А для чего вы используете в своих проектах агенты? Напишите в комментариях, было бы очень интересно.</p>
+
+<p>Первоначально опубликовал этот пост на хабре, почитать оригинал можно <a href="http://habrahabr.ru/post/230239/">тут</a></p>
+]]></content>
+  </entry>
+  
+</feed>
