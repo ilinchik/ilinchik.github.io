@@ -2,10 +2,10 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
 
   <title><![CDATA[Category: Java Agent | Anton Ilinchik's Blog]]></title>
-  <link href="http://ilinchik.github.io/blog/categories/java-agent/atom.xml" rel="self"/>
-  <link href="http://ilinchik.github.io/"/>
-  <updated>2015-02-23T00:17:47+03:00</updated>
-  <id>http://ilinchik.github.io/</id>
+  <link href="http://blog.ilinchik.ru/blog/categories/java-agent/atom.xml" rel="self"/>
+  <link href="http://blog.ilinchik.ru/"/>
+  <updated>2015-02-23T12:47:33+03:00</updated>
+  <id>http://blog.ilinchik.ru/</id>
   <author>
     <name><![CDATA[Anton Ilinchik]]></name>
     
@@ -15,9 +15,9 @@
   
   <entry>
     <title type="html"><![CDATA[Java Agent на службе JVM]]></title>
-    <link href="http://ilinchik.github.io/blog/2015/02/07/java-agent/"/>
+    <link href="http://blog.ilinchik.ru/blog/2015/02/07/java-agent/"/>
     <updated>2015-02-07T01:19:35+03:00</updated>
-    <id>http://ilinchik.github.io/blog/2015/02/07/java-agent</id>
+    <id>http://blog.ilinchik.ru/blog/2015/02/07/java-agent</id>
     <content type="html"><![CDATA[<p><img class="left <a" src="href="http://habrastorage.org/getpro/habr/post_images/0d6/cea/505/0d6cea5059f39fac1c6522285bd73794.png">http://habrastorage.org/getpro/habr/post_images/0d6/cea/505/0d6cea5059f39fac1c6522285bd73794.png</a>&#8221;&#8221;>
 Наверное многие слышали или сталкивались с таким параметром JVM как -javaagent, увидеть этот параметр вы могли используя <a href="http://zeroturnaround.com/software/jrebel">Jrebel</a> или <a href="https://plumbr.eu">Plumbr</a> это могло выглядеть например так <code>JAVA_OPTS=-javaagent:[path/to/]jrebel.jar</code> или так <code>-javaagent:/path-to/plumbr.jar</code>
 Хотя <strong>javaagent</strong> появился еще в версии java 1.5, многие разработчики так никогда и не использовали возможности агентов и имеют смутное представление что это такое.<br/>

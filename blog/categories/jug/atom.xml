@@ -2,10 +2,10 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
 
   <title><![CDATA[Category: Jug | Anton Ilinchik's Blog]]></title>
-  <link href="http://ilinchik.github.io/blog/categories/jug/atom.xml" rel="self"/>
-  <link href="http://ilinchik.github.io/"/>
-  <updated>2015-02-23T00:17:47+03:00</updated>
-  <id>http://ilinchik.github.io/</id>
+  <link href="http://blog.ilinchik.ru/blog/categories/jug/atom.xml" rel="self"/>
+  <link href="http://blog.ilinchik.ru/"/>
+  <updated>2015-02-23T12:47:33+03:00</updated>
+  <id>http://blog.ilinchik.ru/</id>
   <author>
     <name><![CDATA[Anton Ilinchik]]></name>
     
@@ -15,9 +15,9 @@
   
   <entry>
     <title type="html"><![CDATA[JUG в каждый город]]></title>
-    <link href="http://ilinchik.github.io/blog/2015/02/07/jug-for-each-city/"/>
+    <link href="http://blog.ilinchik.ru/blog/2015/02/07/jug-for-each-city/"/>
     <updated>2015-02-07T00:58:39+03:00</updated>
-    <id>http://ilinchik.github.io/blog/2015/02/07/jug-for-each-city</id>
+    <id>http://blog.ilinchik.ru/blog/2015/02/07/jug-for-each-city</id>
     <content type="html"><![CDATA[<p><img class="left <a" src="href="http://habrastorage.org/getpro/habr/post_images/484/260/2a6/4842602a616898e5dc6d2718a1df1473.gif">http://habrastorage.org/getpro/habr/post_images/484/260/2a6/4842602a616898e5dc6d2718a1df1473.gif</a>&#8221;&#8221;>
 <a href="http://en.wikipedia.org/wiki/Java_User_Group" title="">Java User Groups</a>(JUGs) – это волонтерские организации Java-разработчиков призванные объединить Java-программистов, пользователей Java и IT-компании. Обычно объединенные по географическому признаку, например <a href="http://jug.msk.ru">Московское сообщество Java-разработчиков</a> или <a href="http://www.belarusjug.org">Белорусская Java User Group</a></a>. Они предоставляют место встречи для пользователей Java, чтобы обмениваться информацией, обсуждать проблемы и решения из мира Java и, прежде всего, <strong><em>пить пиво, есть пиццу и получать удовольствие.</em></strong>  <br/>
 Как создать свой JUG и зачем это надо, читаем ниже.</p>

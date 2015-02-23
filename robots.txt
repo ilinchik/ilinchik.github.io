@@ -1,4 +1,4 @@
 User-agent: *
 Disallow: 
 
-Sitemap: http://ilinchik.github.io/sitemap.xml 
+Sitemap: http://blog.ilinchik.ru/sitemap.xml 
